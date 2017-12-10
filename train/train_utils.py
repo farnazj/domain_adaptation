@@ -9,6 +9,7 @@ import numpy as np
 from sklearn import metrics
 import meter
 import itertools
+import math
 
 
 def runEncoderOnQuestions(samples, encoder_model, args):
@@ -145,7 +146,10 @@ def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer
             encoder_loss = criterion(X_scores, y_targets)
             print "Encoder loss in batch", encoder_loss.data
 
-            task_loss = encoder_loss - args.lambda_d * domain_classifier_loss
+            new_lambda = args.lambda_d * 10**(int(math.log10(encoder_loss.data.numpy().item())) - int(math.log10(domain_classifier_loss.data.numpy().item())))
+            print "new lambda is ", new_lambda
+
+            task_loss = encoder_loss - new_lambda * domain_classifier_loss
             print "Task loss in batch", task_loss.data
             print "\n\n"
 
