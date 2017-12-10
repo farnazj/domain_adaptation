@@ -13,7 +13,7 @@ BATCH_SIZE = 16
 WEIGHT_DECAY = [1e-6, 1e-6]
 LR = [1e-3, -1e-3]
 DROPOUT = 0.1
-LAMBDA = 1e-3
+LAMBDA = 1e-2
 
 TRAIN = False
 TEST = False
