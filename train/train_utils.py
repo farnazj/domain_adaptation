@@ -30,25 +30,25 @@ def runEncoderOnQuestions(samples, encoder_model, args):
     return hidden_rep
 
 
-def train_model(train_data, dev_data, encoder_model, domain_discriminator, args):
+def train_model(train_data, dev_data, encoder_model, args):
     if args.cuda:
-        encoder_model, domain_discriminator = encoder_model.cuda(), domain_discriminator.cuda()
+        encoder_model = encoder_model.cuda()
 
     parameters = itertools.ifilter(lambda p: p.requires_grad, encoder_model.parameters())
-    encoder_optimizer = torch.optim.Adam(parameters , lr=args.lr[0], weight_decay=args.weight_decay[0])
+    encoder_optimizer = torch.optim.Adam(parameters , lr=args.lr, weight_decay=args.weight_decay)
 
-    domain_optimizer = torch.optim.Adam(domain_discriminator.parameters() , lr=args.lr[1], weight_decay=args.weight_decay[1])
+    #domain_optimizer = torch.optim.Adam(domain_discriminator.parameters() , lr=args.lr[1], weight_decay=args.weight_decay[1])
 
     for epoch in range(1, args.epochs+1):
         print("-------------\nEpoch {}:\n".format(epoch))
 
-        run_epoch(train_data, True, (encoder_model, encoder_optimizer), (domain_discriminator, domain_optimizer), args)
+        run_epoch(train_data, True, (encoder_model, encoder_optimizer), args)
 
         model_path = args.save_path[:args.save_path.rfind(".")] + "_" + str(epoch) + args.save_path[args.save_path.rfind("."):]
         torch.save(encoder_model, model_path)
 
         print "*******dev********"
-        run_epoch(dev_data, False, (encoder_model, encoder_optimizer), (domain_discriminator, domain_optimizer), args)
+        run_epoch(dev_data, False, (encoder_model, encoder_optimizer), args)
 
 
 
@@ -57,16 +57,15 @@ def test_model(test_data, encoder_model, args):
         encoder_model = encoder_model.cuda()
 
     print "*******test********"
-    run_epoch(test_data, False, (encoder_model, None) , (None, None), args)
+    run_epoch(test_data, False, (encoder_model, None), args)
 
 
 
-def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer, args):
+def run_epoch(data, is_training, encoder_model_optimizer, args):
     '''
     Train model for one pass of train data, and return loss, acccuracy
     '''
     encoder_model, encoder_optimizer = encoder_model_optimizer
-    domain_model, domain_optimizer = domain_model_optimizer
 
     data_loader = torch.utils.data.DataLoader(
         data,
@@ -79,7 +78,6 @@ def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer
 
     if is_training:
         encoder_model.train()
-        domain_model.train()
     else:
         encoder_model.eval()
 
@@ -98,7 +96,6 @@ def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer
 
         if is_training:
             encoder_optimizer.zero_grad()
-            domain_optimizer.zero_grad()
 
         ###source question encoder####
         if is_training:
@@ -129,6 +126,7 @@ def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer
 
         if is_training:
             #####domain classifier#####
+            '''
             cross_d_questions = batch['question']
             avg_hidden_rep = runEncoderOnQuestions(cross_d_questions, encoder_model, args)
 
@@ -141,23 +139,25 @@ def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer
 
             domain_classifier_loss = nll_loss(predicted_domains, true_domains)
             print "Domain loss in batch", domain_classifier_loss.data
+            '''
 
             #calculate loss
             encoder_loss = criterion(X_scores, y_targets)
             print "Encoder loss in batch", encoder_loss.data
 
+            '''
             new_lambda = args.lambda_d * 10**(int(math.log10(encoder_loss.cpu().data.numpy().item())) - int(math.log10(domain_classifier_loss.cpu().data.numpy().item())))
             print "new lambda is ", new_lambda
 
             task_loss = encoder_loss - new_lambda * domain_classifier_loss
             print "Task loss in batch", task_loss.data
             print "\n\n"
+            '''
 
-            task_loss.backward()
+            encoder_loss.backward()
             encoder_optimizer.step()
-            domain_optimizer.step()
 
-            losses.append(task_loss.cpu().data[0])
+            losses.append(encoder_loss.cpu().data[0])
 
         else:
 

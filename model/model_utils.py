@@ -20,9 +20,9 @@ def get_models(embeddings, args):
     else:
         raise Exception("Model name {} not supported!".format(args.model_name))
 
-    domain_discriminator = FFN(args)
+    #domain_discriminator = FFN(args)
 
-    return encoder_model, domain_discriminator
+    return encoder_model
 
 
 class FFN(nn.Module):
