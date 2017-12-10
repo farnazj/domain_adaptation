@@ -32,10 +32,11 @@ def readQCorpus(filename):
 	with gzip.open(filename) as gfile:
 		for row in gfile:
 			row_arr = row.split()
+			row_arr_lower = [x.lower() for x in row_arr]
 
-			row_string = string.join(row_arr[1:TEXTMAX_LENGTH + 1])
+			row_string = string.join(row_arr_lower[1:TEXTMAX_LENGTH + 1])
 
-			data[row_arr[0]] = row_string
+			data[row_arr_lower[0]] = row_string
 
 	return data
 
