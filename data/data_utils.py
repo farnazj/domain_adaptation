@@ -27,9 +27,9 @@ MAX_BODY_LEN = 100
 def getEmbeddingTensor():
     word2idx = {}
     embedding_tensor = []
+    global EMB_LEN
     embedding_tensor.append(np.zeros(EMB_LEN))
     zipf = ZipFile(PATH_EMB)
-    global EMB_LEN
 
     with zipf.open(EMB_FNAME) as gfile:
         for i, line in enumerate(gfile, start=1):
@@ -38,6 +38,7 @@ def getEmbeddingTensor():
             vector = [float(x) for x in emb]
             embedding_tensor.append(vector)
             word2idx[word] = i
+
     embedding_tensor = np.array(embedding_tensor, dtype=np.float32)
     return embedding_tensor, word2idx
 
@@ -59,7 +60,7 @@ def get_id2source(word2idx):
             for word in body:
                 if count >= MAX_BODY_LEN:
                     break
-                if word in word2idx:
+                if word.lower() in word2idx:
                     body2iarr.append(word2idx[word])
                 else:
                     body2iarr.append(0)
@@ -90,7 +91,7 @@ def get_id2target(word2idx):
 
             count = 0
             for word in body:
-                if word in word2idx:
+                if word.lower() in word2idx:
                     if count >= MAX_BODY_LEN:
                         break
                     body2iarr.append(word2idx[word])
