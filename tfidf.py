@@ -1,25 +1,26 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from stop_words import get_stop_words
+#from stop_words import get_stop_words
 from operator import itemgetter
 from sklearn import metrics
-import train.meter as meter
+#import train.meter as meter
 import numpy as np
 import gzip
 import string
 import random
+import evaluation
 
 
 PATH_EMB = "./askubuntu/vector/vectors_pruned.200.txt.gz"
 PATH_SOURCE_QUESTION_CORPUS = "./askubuntu/text_tokenized.txt.gz"
 PATH_TARGET_QUESTION_CORPUS =  "./Android/corpus.tsv.gz"
 
-PATHS_DEV = ["./Android/dev.pos.txt", "./Android/dev.neg.txt"]  #["./askubuntu/dev.txt"] #
-PATHS_TEST = ["./Android/test.pos.txt", "./Android/test.neg.txt"] #["./askubuntu/test.txt"]  #
+PATHS_DEV = ["./askubuntu/dev.txt"] # ["./Android/dev.pos.txt", "./Android/dev.neg.txt"]  # #
+PATHS_TEST = ["./askubuntu/test.txt"] #["./Android/test.pos.txt", "./Android/test.neg.txt"] #  #
 
 TEXTMAX_LENGTH = 100 #int or None
 QCOUNT = 20
-CROSS_DOMAIN = True
+CROSS_DOMAIN = False
 
 
 
@@ -34,7 +35,7 @@ def readQCorpus(filename):
 			row_arr = row.split()
 			row_arr_lower = [x.lower() for x in row_arr]
 
-			row_string = string.join(row_arr_lower[1:TEXTMAX_LENGTH + 1])
+			row_string = string.join(row_arr_lower[1:])
 
 			data[row_arr_lower[0]] = row_string
 
@@ -247,7 +248,9 @@ def ComputeSimilarity(path, vectorizer, questions_dict, CROSS_DOMAIN):
 	num_samples = 0.0
 	top_5 = 0.0
 	top_1 = 0.0
-	auc_met = meter.AUCMeter()
+	#auc_met = meter.AUCMeter()
+
+	all_samples = []
 
 	for q in dataset:
 
@@ -271,25 +274,28 @@ def ComputeSimilarity(path, vectorizer, questions_dict, CROSS_DOMAIN):
 		for index, question in enumerate(vector_label_list):
 			cs_label_pair.append((cs[index], question[1]))
 
-			auc_met.add(cs[index], question[1])
+
 
 		if not CROSS_DOMAIN:
 			scores_list = sorted(cs_label_pair, reverse = True, key=itemgetter(0))
-			sum_av_prec, sum_ranks, num_samples, top_5, top_1 = updateScores(scores_list, sum_av_prec, sum_ranks, num_samples, top_5, top_1)
+			new_scores_list = [x[1] for x in scores_list]
+			all_samples.append(new_scores_list)
+
+
+
+			#sum_av_prec, sum_ranks, num_samples, top_5, top_1 = updateScores(scores_list, sum_av_prec, sum_ranks, num_samples, top_5, top_1)
 		else:
+			auc_met.add(cs[index], question[1])
 			all_q_scores.extend(cs_label_pair)
 
 
-
 	if not CROSS_DOMAIN:
-		_map = sum_av_prec/num_samples
-		_mrr = sum_ranks/num_samples
-		_pat5 = top_5/(num_samples*5)
-		_pat1 = top_1/num_samples
-		print 'MAP: {:.3f}'.format(_map)
-		print 'MRR: {:.3f}'.format(_mrr)
-		print 'P@1: {:.3f}'.format(_pat1)
-		print 'P@5: {:.3f}'.format(_pat5)
+		evalobj = evaluation.Evaluation(all_samples)
+
+		print "MAP:", evalobj.MAP()
+		print "MRR:", evalobj.MRR()
+		print "P@5:", evalobj.Precision(5)
+		print "P@1:", evalobj.Precision(1)
 	else:
 		print 'AUC: {:.3f}'.format(auc_met.value(0.05))
 
@@ -311,7 +317,7 @@ else:
 BINARY_COUNT = False
 
 
-for stop_words_used in [None, get_stop_words('en')]:
+for stop_words_used in [None]:
 	stop_word_status = "using stop words" if stop_words_used != None else "not using stop words"
 
 	for NGRAM_RANGE in [(1,1), (1,2), (1,3)]:
