@@ -146,7 +146,7 @@ def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer
             encoder_loss = criterion(X_scores, y_targets)
             print "Encoder loss in batch", encoder_loss.data
 
-            if encoder_loss == 0:
+            if encoder_loss.cpu().data.numpy().item() == 0:
                 new_lambda = -new_lambda
             else:
                 new_lambda = args.lambda_d * 10**(int(math.log10(encoder_loss.cpu().data.numpy().item())) - int(math.log10(domain_classifier_loss.cpu().data.numpy().item())))
