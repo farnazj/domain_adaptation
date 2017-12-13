@@ -1,9 +1,10 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-#from stop_words import get_stop_words
+from stop_words import get_stop_words
 from operator import itemgetter
 from sklearn import metrics
-#import train.meter as meter
+from zipfile import ZipFile
+import train.meter as meter
 import numpy as np
 import gzip
 import string
@@ -11,16 +12,22 @@ import random
 import evaluation
 
 
-PATH_EMB = "./askubuntu/vector/vectors_pruned.200.txt.gz"
+TEXTMAX_LENGTH = 100
+QCOUNT = 20
+CROSS_DOMAIN = True
+
+if not CROSS_DOMAIN:
+	PATH_EMB ="./askubuntu/vector/vectors_pruned.200.txt.gz"
+	PATHS_DEV = ["./askubuntu/dev.txt"]
+	PATHS_TEST = ["./askubuntu/test.txt"]
+else:
+	PATH_EMB = "glove.emb.zip"
+	EMB_FNAME = "glove.emb"
+	PATHS_DEV = ["./Android/dev.pos.txt", "./Android/dev.neg.txt"] 
+	PATHS_TEST = ["./Android/test.pos.txt", "./Android/test.neg.txt"] 
+
 PATH_SOURCE_QUESTION_CORPUS = "./askubuntu/text_tokenized.txt.gz"
 PATH_TARGET_QUESTION_CORPUS =  "./Android/corpus.tsv.gz"
-
-PATHS_DEV = ["./askubuntu/dev.txt"] # ["./Android/dev.pos.txt", "./Android/dev.neg.txt"]  # #
-PATHS_TEST = ["./askubuntu/test.txt"] #["./Android/test.pos.txt", "./Android/test.neg.txt"] #  #
-
-TEXTMAX_LENGTH = 100 #int or None
-QCOUNT = 20
-CROSS_DOMAIN = False
 
 
 
@@ -32,12 +39,11 @@ def readQCorpus(filename):
 	data = {}
 	with gzip.open(filename) as gfile:
 		for row in gfile:
-			row_arr = row.split()
-			row_arr_lower = [x.lower() for x in row_arr]
+			q_num, title, body = row.split("\t")
+			body_arr = body.split()
+			row_string = title + "\t" + string.join(body_arr[:TEXTMAX_LENGTH])
 
-			row_string = string.join(row_arr_lower[1:])
-
-			data[row_arr_lower[0]] = row_string
+			data[q_num] = row_string
 
 	return data
 
@@ -52,18 +58,25 @@ def vectorizeData(corpus_data, binary_count, vocab, stop_words_, ngram_range_, m
 	return vectorizer
 
 
-def buildDictionary():
+def buildDictionary(embedding_file):
 	'''
 	Builds the dictionary from the embedding file, to be used by tfidfvectorizer.
 	'''
 
-	vocabulary = []
-	with gzip.open(PATH_EMB) as gfile:
-		for line in gfile:
-			word = line.split()[0]
-			vocabulary.append(word)
+	if CROSS_DOMAIN:
+		zipf = ZipFile(embedding_file)
 
-	return vocabulary
+		gfile = zipf.open(EMB_FNAME)
+	else:
+		gfile = gzip.open(embedding_file)
+
+	vocabulary = []
+
+	for line in gfile:
+		word = line.split()[0]
+		vocabulary.append(word)
+
+	return list(set(vocabulary))
 
 
 def createVectorLabelTuples(all_q, questions_dict, q, list_of_pos, vectorizer):
@@ -248,9 +261,9 @@ def ComputeSimilarity(path, vectorizer, questions_dict, CROSS_DOMAIN):
 	num_samples = 0.0
 	top_5 = 0.0
 	top_1 = 0.0
-	#auc_met = meter.AUCMeter()
+	auc_met = meter.AUCMeter()
 
-	all_samples = []
+	sorted_results = []
 
 	for q in dataset:
 
@@ -275,12 +288,10 @@ def ComputeSimilarity(path, vectorizer, questions_dict, CROSS_DOMAIN):
 			cs_label_pair.append((cs[index], question[1]))
 
 
-
 		if not CROSS_DOMAIN:
 			scores_list = sorted(cs_label_pair, reverse = True, key=itemgetter(0))
-			new_scores_list = [x[1] for x in scores_list]
-			all_samples.append(new_scores_list)
-
+			labels_only = [x[1] for x in scores_list]
+			sorted_results.append(labels_only)
 
 
 			#sum_av_prec, sum_ranks, num_samples, top_5, top_1 = updateScores(scores_list, sum_av_prec, sum_ranks, num_samples, top_5, top_1)
@@ -290,7 +301,7 @@ def ComputeSimilarity(path, vectorizer, questions_dict, CROSS_DOMAIN):
 
 
 	if not CROSS_DOMAIN:
-		evalobj = evaluation.Evaluation(all_samples)
+		evalobj = evaluation.Evaluation(sorted_results)
 
 		print "MAP:", evalobj.MAP()
 		print "MRR:", evalobj.MRR()
@@ -300,10 +311,7 @@ def ComputeSimilarity(path, vectorizer, questions_dict, CROSS_DOMAIN):
 		print 'AUC: {:.3f}'.format(auc_met.value(0.05))
 
 
-stop_words_used = None #or get_stop_words('en')
-NGRAM_RANGE = (1,3)
-
-vocabulary = buildDictionary()
+vocabulary = buildDictionary(PATH_EMB)
 #vocabulary = None
 #vocabulary could be None if we would like TfidfVectorizer to build a comprehensive vocabulary of the data (takes a very long time)
 
@@ -314,11 +322,11 @@ if CROSS_DOMAIN:
 else:
 	questions_dict = source_questions_dict
 
-BINARY_COUNT = False
 
 
-for stop_words_used in [None]:
+for stop_words_used in [None, get_stop_words('en')]:
 	stop_word_status = "using stop words" if stop_words_used != None else "not using stop words"
+	print stop_word_status
 
 	for NGRAM_RANGE in [(1,1), (1,2), (1,3)]:
 		print NGRAM_RANGE
