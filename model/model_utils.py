@@ -32,7 +32,7 @@ class FFN(nn.Module):
 
         self.args = args
         self.input_size = self.args.hd_size
-        self.output_size = 150 #int(self.args.hd_size/2) #tunable
+        self.output_size = 75 #int(self.args.hd_size/2) #tunable
         if args.model_name == "lstm":
             self.input_size = self.input_size * 2
             self.output_size = self.output_size * 2

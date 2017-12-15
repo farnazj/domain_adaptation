@@ -93,7 +93,7 @@ def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer
     for batch in tqdm(data_loader):
 
         cosine_similarity = nn.CosineSimilarity(dim=0, eps=1e-6)
-        criterion = nn.MultiMarginLoss(margin=0.4)
+        criterion = nn.MultiMarginLoss(margin=0.3)
         #pdb.set_trace()
 
         if is_training:
