@@ -139,7 +139,7 @@ def run_epoch(data, is_training, encoder_model_optimizer, domain_model_optimizer
             if args.cuda:
                 true_domains = true_domains.cuda()
 
-            domain_classifier_loss = nll_loss(predicted_domains, true_domains)
+            domain_classifier_loss = F.cross_entropy(predicted_domains, true_domains)
             print "Domain loss in batch", domain_classifier_loss.data
 
             #calculate loss

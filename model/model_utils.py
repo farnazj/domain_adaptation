@@ -32,19 +32,21 @@ class FFN(nn.Module):
 
         self.args = args
         self.input_size = self.args.hd_size
-        self.output_size = int(self.args.hd_size/2) #tunable
+        self.output_size = 150 #int(self.args.hd_size/2) #tunable
         if args.model_name == "lstm":
             self.input_size = self.input_size * 2
             self.output_size = self.output_size * 2
 
-        self.W_hidden = nn.Linear(self.input_size, self.output_size)
+        self.first_layer = nn.Linear(self.input_size, 300)
+	self.W_hidden = nn.Linear(300, self.output_size)
         self.W_out = nn.Linear(self.output_size, 2)
         self.softmax = nn.LogSoftmax()
 
     def forward(self, features):
         squeezed_features = features.squeeze(1)
-
-        hidden_out = F.relu(self.W_hidden(squeezed_features))
+	
+	first_output = self.first_layer(squeezed_features)
+        hidden_out = F.relu(self.W_hidden(first_output))
         out_result = self.W_out(hidden_out)
         output = self.softmax(out_result)
         return output
