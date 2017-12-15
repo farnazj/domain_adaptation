@@ -42,6 +42,7 @@ def readQCorpus(filename):
 			q_num, title, body = row.split("\t")
 			body_arr = body.split()
 			row_string = title + "\t" + string.join(body_arr[:TEXTMAX_LENGTH])
+			#row_string = title + "\t" + string.join(body_arr)
 
 			data[q_num] = row_string
 
@@ -95,39 +96,6 @@ def createVectorLabelTuples(all_q, questions_dict, q, list_of_pos, vectorizer):
 
 	return vector_label_list
 
-
-
-def updateScores(scores_list, sum_av_prec, sum_ranks, num_samples, top_5, top_1):
-
-	count = 0.0
-	last_index = -1
-	sum_prec = 0.0
-	flag = 0
-
-	for j in range(len(scores_list)):
-		if scores_list[j][1] == 1:
-			count += 1
-			sum_prec += count/(j+1)
-			last_index = j+1
-
-			if flag == 0:
-				sum_ranks += 1.0/(j+1)
-				flag = 1
-
-			if j == 0:
-				top_1 += 1
-
-			if j < 5:
-				top_5 += 1
-
-
-	if last_index > 0:
-		sum_prec /= count
-
-	sum_av_prec += sum_prec
-	num_samples += 1
-
-	return sum_av_prec, sum_ranks, num_samples, top_5, top_1
 
 
 
@@ -308,7 +276,7 @@ def ComputeSimilarity(path, vectorizer, questions_dict, CROSS_DOMAIN):
 		print "P@5:", evalobj.Precision(5)
 		print "P@1:", evalobj.Precision(1)
 	else:
-		print 'AUC: {:.3f}'.format(auc_met.value(0.05))
+		print 'AUC: {:.4f}'.format(auc_met.value(0.05))
 
 
 vocabulary = buildDictionary(PATH_EMB)
