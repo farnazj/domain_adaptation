@@ -8,12 +8,12 @@ import cPickle as pickle
 
 
 HIDDEN_SIZE = 240
-EPOCHS = 42
+EPOCHS = 46
 BATCH_SIZE = 16
 WEIGHT_DECAY = [1e-6, 1e-6]
 LR = [1e-3, -1e-3]
 DROPOUT = 0.1
-LAMBDA = 1e-7
+LAMBDA = 1e-4
 
 TRAIN = False
 TEST = False
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         print('\nLoading model from [%s]...' % args.snapshot)
 
         try:
-            model = torch.load(args.snapshot)
+            encoder_model = torch.load(args.snapshot)
         except Exception as e :
             print e
             print("Sorry, This snapshot doesn't exist.")
