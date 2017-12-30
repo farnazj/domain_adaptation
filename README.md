@@ -1,4 +1,4 @@
-transfer learning from a source domain to a different target domain using adversarial training
+Transfer learning from a source domain to a different target domain using adversarial training
 
 To train the model, run the following command:
 python main.py --train --model_name lstm/cnn --save_path model_name.pt 
